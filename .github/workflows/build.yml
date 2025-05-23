@@ -67,7 +67,7 @@ jobs:
 
   build-image:
     name: Build image
-    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-image.yml@v1
+    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-image.yml@main
     needs: set-env
     strategy:
       fail-fast: false
@@ -76,6 +76,7 @@ jobs:
       containerfile: Dockerfile
       image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
       previous-image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
+      variant: ${{ matrix.variant }}
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       skip-maximize-build-space: true
       image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
