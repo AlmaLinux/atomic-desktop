@@ -23,6 +23,8 @@ jobs:
       PLATFORMS: ${{ steps.set.outputs.PLATFORMS }}
       IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
       IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
+      VARIANTS: ${{ steps.set.outputs.VARIANTS }}
+      MATRIX: ${{ steps.set.outputs.MATRIX }}
       IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
     steps:
       - name: Set environment variables
@@ -41,12 +43,16 @@ jobs:
           REGISTRY_USER="almalinuxorg+airibarr_bot"
           IMAGE_PATH="almalinuxorg"
           PLATFORMS="amd64"
+          VARIANTS="gnome,kde"
 
           echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
           echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
           echo "IMAGE_PATH=${IMAGE_PATH}" >> $GITHUB_OUTPUT
           echo "IMAGE_NAME=${REGISTRY}/${IMAGE_PATH}/${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
           echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
+          echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
+
+          echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
 
           # This is a workaround so that the expansion of secrets.SIGNING_SECRET doesn't break the if statement
           SECRET=$(cat <<EOF
@@ -63,10 +69,13 @@ jobs:
     name: Build image
     uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-image.yml@v1
     needs: set-env
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
     with:
       containerfile: Dockerfile
-      image-name: "${{ github.event.repository.name }}"
-      previous-image: "${{ needs.set-env.outputs.IMAGE_NAME }}:latest"
+      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
+      previous-image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       skip-maximize-build-space: true
       image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
@@ -84,6 +93,9 @@ jobs:
     name: Test image
     runs-on: ubuntu-latest
     needs: [set-env, build-image]
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
 
     env:
       IMAGE_REF: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
@@ -110,11 +122,14 @@ jobs:
   build-iso:
     name: Build ISO
     needs: [set-env, build-image, test-image]
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
     uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-iso.yml@v1
     with:
-      image-name: "${{ github.event.repository.name }}"
+      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
       image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
@@ -126,6 +141,9 @@ jobs:
   promote-image:
     name: Promote image
     needs: [set-env, build-image, test-image]
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     uses: AlmaLinux/desktop-bootc-ci/.github/workflows/retag-image.yml@v1
     with:
@@ -144,10 +162,13 @@ jobs:
   create-release:
     name: Create Release
     needs: [set-env, build-image, test-image, promote-image, build-iso]
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     uses: AlmaLinux/desktop-bootc-ci/.github/workflows/create-release.yml@v1
     with:
-      image-name: "${{ github.event.repository.name }}"
+      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
       version: ${{ needs.build-image.outputs.version }}
       pretty-version: ${{ needs.build-image.outputs.redhat-version-id }}
       latest-image-ref: "${{ needs.build-image.outputs.image-ref }}:${{ needs.set-env.outputs.LATEST_TAG }}"
