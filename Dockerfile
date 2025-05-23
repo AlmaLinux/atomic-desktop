@@ -10,6 +10,7 @@ FROM quay.io/almalinuxorg/almalinux-bootc:10-kitten@sha256:a62eb8eb0470c74deed65
 
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
+ARG VARIANT
 
 RUN --mount=type=tmpfs,dst=/opt \
     --mount=type=tmpfs,dst=/tmp \
