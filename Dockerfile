@@ -15,8 +15,7 @@ ARG VARIANT
 RUN --mount=type=tmpfs,dst=/opt \
     --mount=type=tmpfs,dst=/tmp \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
-    /ctx/build_files/build.sh && \
-    dnf clean all
+    /ctx/build_files/build.sh
 
 ### LINTING
 ## Verify final image and contents are correct.
