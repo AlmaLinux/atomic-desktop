@@ -10,6 +10,8 @@ QEMU_DISK_RAW ?= ./output/disk.raw
 QEMU_DISK_QCOW2 ?= ./output/qcow2/disk.qcow2
 QEMU_ISO ?= ./output/bootiso/install.iso
 
+VARIANT ?= gnome
+
 .ONESHELL:
 
 clean:
@@ -22,6 +24,7 @@ image:
 		--device /dev/fuse \
 		--build-arg IMAGE_NAME=$(IMAGE_NAME) \
 		--build-arg IMAGE_REGISTRY=localhost \
+		--build-arg VARIANT=$(VARIANT) \
 		-t $(IMAGE_NAME) \
 		-f $(CONTAINER_FILE) \
 		.
