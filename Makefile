@@ -3,6 +3,7 @@ PODMAN = $(SUDO) podman
 
 IMAGE_NAME ?= localhost/myimage
 CONTAINER_FILE ?= ./Dockerfile
+VARIANT ?= gnome
 IMAGE_CONFIG ?= ./iso.toml
 
 IMAGE_TYPE ?= iso
@@ -22,6 +23,7 @@ image:
 		--device /dev/fuse \
 		--build-arg IMAGE_NAME=$(IMAGE_NAME) \
 		--build-arg IMAGE_REGISTRY=localhost \
+		--build-arg VARIANT=$(VARIANT) \
 		-t $(IMAGE_NAME) \
 		-f $(CONTAINER_FILE) \
 		.
