@@ -16,7 +16,7 @@ elif [[ "${VARIANT}" == "kde" ]]; then
     # systemctl enable sddm
 
 else
-    echo "Neutral variant"
+    true
 
 fi
 
