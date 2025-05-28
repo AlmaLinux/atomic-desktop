@@ -1,0 +1,110 @@
+name: Reusable Build
+on:
+  workflow_call:
+    inputs:
+      variant:
+        required: true
+        type: string
+      containerfile:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      previous_image:
+        required: true
+        type: string
+      platforms:
+        required: true
+        type: string
+      image_path:
+        required: true
+        type: string
+      registry:
+        required: true
+        type: string
+      registry_user:
+        required: true
+        type: string
+      update_origin_ref:
+        required: true
+        type: string
+      update_is_signed:
+        required: true
+        type: boolean
+      config_file:
+        required: true
+        type: string
+      latest_tag:
+        required: false
+        type: string
+    outputs:
+      version:
+        value: ${{ jobs.build-image.outputs.version }}
+    secrets:
+      REGISTRY_TOKEN:
+        required: true
+      SIGNING_SECRET:
+        required: false
+
+jobs:
+  build-image:
+    name: Build image
+    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-image.yml@v2
+    with:
+      containerfile: ${{ inputs.containerfile }}
+      image-name: ${{ inputs.image_name }}
+      previous-image: ${{ inputs.previous_image }}
+      variant: ${{ inputs.variant }}
+      platforms: ${{ inputs.platforms }}
+      skip-maximize-build-space: true
+      image-path: ${{ inputs.image_path }}
+      REGISTRY: ${{ inputs.registry }}
+      REGISTRY_USER: ${{ inputs.registry_user }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  test-image:
+    name: Test image
+    runs-on: ubuntu-latest
+    needs: build-image
+    env:
+      IMAGE_REF: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
+    steps:
+      - name: Login to Container Registry
+        run: echo ${{ secrets.REGISTRY_TOKEN }} | podman login -u ${{ inputs.registry_user }} --password-stdin ${{ inputs.registry }}
+      - name: Test container
+        run: |
+          cat << 'EOF' > /tmp/test.sh
+          set -ex
+          cat /etc/os-release
+          bootc -V
+          EOF
+          podman run --rm \
+            -v /tmp/test.sh:/tmp/test.sh \
+            ${{ env.IMAGE_REF }} \
+            /bin/bash /tmp/test.sh
+
+  promote-image:
+    name: Promote image
+    needs: [build-image, test-image]
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/retag-image.yml@v2
+    with:
+      image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
+      tag: |
+        ${{ inputs.latest_tag }}
+        ${{ needs.build-image.outputs.redhat-version-id }}
+        ${{ needs.build-image.outputs.version }}
+      REGISTRY: ${{ inputs.registry }}
+      REGISTRY_USER: ${{ inputs.registry_user }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+    permissions:
+      packages: write
+
