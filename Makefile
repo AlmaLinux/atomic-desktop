@@ -1,6 +1,7 @@
 SUDO = sudo
 PODMAN = $(SUDO) podman
 
+BASE ?= 
 IMAGE_NAME ?= localhost/myimage
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= gnome
@@ -24,6 +25,7 @@ image:
 		--build-arg IMAGE_NAME=$(IMAGE_NAME) \
 		--build-arg IMAGE_REGISTRY=localhost \
 		--build-arg VARIANT=$(VARIANT) \
+		--build-arg BASE=$(BASE) \
 		-t $(IMAGE_NAME) \
 		-f $(CONTAINER_FILE) \
 		.
