@@ -65,23 +65,26 @@ jobs:
             echo "IS_SIGNED=true" >> $GITHUB_OUTPUT
           fi
 
-  build-image:
-    name: Build image
-    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-image.yml@main
+  build-test-promote:
+    name: Build, Test, Promote
     needs: set-env
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
+    uses: ./.github/workflows/reusable-build.yml
     with:
-      containerfile: Dockerfile
-      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
-      previous-image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
       variant: ${{ matrix.variant }}
+      containerfile: Dockerfile
+      image_name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
+      previous_image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
+      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      latest_tag: ${{ needs.set-env.outputs.LATEST_TAG }}
+      update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
+      config_file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
-      skip-maximize-build-space: true
-      image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
-      REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
-      REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
+      image_path: ${{ needs.set-env.outputs.IMAGE_PATH }}
+      registry: ${{ needs.set-env.outputs.REGISTRY }}
+      registry_user: ${{ needs.set-env.outputs.REGISTRY_USER }}
     secrets:
       REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
       SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
@@ -90,85 +93,51 @@ jobs:
       packages: write
       id-token: write
 
-  test-image:
-    name: Test image
-    runs-on: ubuntu-latest
-    needs: [set-env, build-image]
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
-
-    env:
-      IMAGE_REF: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
-
-    steps:
-      - name: Login to Container Registry
-        run: echo ${{ secrets.QUAY_PASSWORD }} | podman login -u ${{ needs.set-env.outputs.REGISTRY_USER }} --password-stdin ${{ needs.set-env.outputs.REGISTRY }}
-
-      - name: Test container
-        run: |
-          # Create a short script to test the image using heredoc
-          cat << 'EOF' > /tmp/test.sh
-          set -ex
-
-          cat /etc/os-release
-          bootc -V
-          EOF
-
-          podman run --rm \
-            -v /tmp/test.sh:/tmp/test.sh \
-            ${{ env.IMAGE_REF }} \
-            /bin/bash /tmp/test.sh
-
-  build-iso:
-    name: Build ISO
-    needs: [set-env, build-image, test-image]
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
-    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-iso.yml@v1
-    with:
-      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
-      image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-      update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
-      config-file: ./iso.toml
-      platforms: ${{ needs.set-env.outputs.PLATFORMS }}
-      REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
-      REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
-    secrets:
-      REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
-
-  promote-image:
-    name: Promote image
-    needs: [set-env, build-image, test-image]
-    strategy:
-      fail-fast: false
-      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/retag-image.yml@v1
-    with:
-      image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
-      tag: |
-        ${{ needs.set-env.outputs.LATEST_TAG }}
-        ${{ needs.build-image.outputs.redhat-version-id }}
-        ${{ needs.build-image.outputs.version }}
-      REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
-      REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
-    secrets:
-      REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
-    permissions:
-      packages: write
-
   create-release:
     name: Create Release
-    needs: [set-env, build-image, test-image, promote-image, build-iso]
+    needs: [set-env, build-test-promote]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/create-release.yml@v1
-    with:
-      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
-      version: ${{ needs.build-image.outputs.version }}
-      pretty-version: ${{ needs.build-image.outputs.redhat-version-id }}
-      latest-image-ref: "${{ needs.build-image.outputs.image-ref }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-    permissions:
-      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Changelogs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: changelog-*
+          merge-multiple: true
+          path: /tmp/changelogs
+
+      - name: Prepare Release
+        id: prepare-release
+        shell: bash
+        run: |
+          echo "Automated release for version \`${{ needs.build-test-promote.outputs.version }}\`." > ./changelog.md
+
+          for changelog in /tmp/changelogs/*.txt; do
+            # Remove empty Package Changes
+            sed -i '/^#### Package Changes$/{
+            N
+            N
+            /#### Package Changes\n[[:space:]]*-[[:space:]]*\n[[:space:]]*$/d
+            }' $changelog
+
+            # Remove empty Commits
+            sed -i '/^#### Commits$/{
+            N
+            N
+            /#### Commits\n[[:space:]]*-[[:space:]]*\n[[:space:]]*$/d
+            }' $changelog
+
+            # If there are no changes, remove the section altogether
+            sed -zi 's/\n### Changes since[^#]*$//' $changelog
+
+            cat $changelog >> ./changelog.md
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2
+        with:
+          name: "Version ${{ needs.build-test-promote.outputs.version }}"
+          tag_name: ${{ needs.build-test-promote.outputs.version }}
+          body_path: ./changelog.md
+          make_latest: true

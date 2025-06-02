@@ -3,6 +3,7 @@ PODMAN = $(SUDO) podman
 
 IMAGE_NAME ?= localhost/myimage
 CONTAINER_FILE ?= ./Dockerfile
+VARIANT ?= gnome
 IMAGE_CONFIG ?= ./iso.toml
 
 IMAGE_TYPE ?= iso

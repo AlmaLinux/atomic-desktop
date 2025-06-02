@@ -1,0 +1,79 @@
+---
+name: Build ISOs
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    outputs:
+      LATEST_TAG: ${{ steps.set.outputs.LATEST_TAG }}
+      REGISTRY: ${{ steps.set.outputs.REGISTRY }}
+      REGISTRY_USER: ${{ steps.set.outputs.REGISTRY_USER }}
+      PLATFORMS: ${{ steps.set.outputs.PLATFORMS }}
+      IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
+      IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
+      VARIANTS: ${{ steps.set.outputs.VARIANTS }}
+      MATRIX: ${{ steps.set.outputs.MATRIX }}
+      IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
+    steps:
+      - name: Set environment variables
+        id: set
+        run: |
+          # Pick a latest tag based on the event type
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "LATEST_TAG=pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" != "refs/heads/${{ github.event.repository.default_branch }}" ]]; then
+            echo "LATEST_TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "LATEST_TAG=latest" >> $GITHUB_OUTPUT
+          fi
+
+          REGISTRY=quay.io
+          REGISTRY_USER="almalinuxorg+airibarr_bot"
+          IMAGE_PATH="almalinuxorg"
+          PLATFORMS="amd64"
+          VARIANTS="gnome,kde"
+
+          echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
+          echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
+          echo "IMAGE_PATH=${IMAGE_PATH}" >> $GITHUB_OUTPUT
+          echo "IMAGE_NAME=${REGISTRY}/${IMAGE_PATH}/${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+          echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
+          echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
+
+          echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
+
+          # This is a workaround so that the expansion of secrets.SIGNING_SECRET doesn't break the if statement
+          SECRET=$(cat <<EOF
+          ${{ secrets.SIGNING_SECRET }}
+          EOF
+          )
+          if [ -z "${SECRET}" ]; then
+            echo "IS_SIGNED=false" >> $GITHUB_OUTPUT
+          else
+            echo "IS_SIGNED=true" >> $GITHUB_OUTPUT
+          fi
+
+  build-iso:
+    name: Build ISO
+    needs: set-env
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
+    uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-iso.yml@v3
+    with:
+      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
+      image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
+      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
+      update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
+      config-file: ./iso.toml
+      platforms: ${{ needs.set-env.outputs.PLATFORMS }}
+      REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
+      REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
