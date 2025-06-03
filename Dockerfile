@@ -1,9 +1,9 @@
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 
-COPY files/system /system_files
-COPY files/scripts /build_files
-COPY *.pub /keys
+COPY files/system /system_files/
+COPY files/scripts /build_files/
+COPY *.pub /keys/
 
 # Base Image
 FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:f601495f1019ac578c9e46ebdeb2beeade2b23f6729d85e4a97b3b2991840fff
