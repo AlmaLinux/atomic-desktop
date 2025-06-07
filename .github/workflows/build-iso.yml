@@ -34,7 +34,7 @@ jobs:
           REGISTRY=quay.io
           REGISTRY_USER="almalinuxorg+airibarr_bot"
           IMAGE_PATH="almalinuxorg"
-          PLATFORMS="amd64"
+          PLATFORMS="amd64,amd64/v2"
           VARIANTS="gnome,kde"
 
           echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
@@ -66,8 +66,8 @@ jobs:
     uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-iso.yml@v4
     with:
       image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
-      image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
+      image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
