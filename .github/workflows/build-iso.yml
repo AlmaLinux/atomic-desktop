@@ -17,6 +17,7 @@ jobs:
       PLATFORMS: ${{ steps.set.outputs.PLATFORMS }}
       IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
       IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
+      IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
       VARIANTS: ${{ steps.set.outputs.VARIANTS }}
       MATRIX: ${{ steps.set.outputs.MATRIX }}
       IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
@@ -34,13 +35,15 @@ jobs:
           REGISTRY=quay.io
           REGISTRY_USER="almalinuxorg+airibarr_bot"
           IMAGE_PATH="almalinuxorg"
-          PLATFORMS="amd64,amd64/v2"
+          IMAGE_NAME=${{ github.event.repository.name }}
+          PLATFORMS="amd64"
           VARIANTS="gnome,kde"
 
           echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
           echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
           echo "IMAGE_PATH=${IMAGE_PATH}" >> $GITHUB_OUTPUT
-          echo "IMAGE_NAME=${REGISTRY}/${IMAGE_PATH}/${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "IMAGE_REF=${REGISTRY}/${IMAGE_PATH}/${IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
           echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
 
@@ -65,9 +68,9 @@ jobs:
       matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
     uses: AlmaLinux/desktop-bootc-ci/.github/workflows/build-iso.yml@v4
     with:
-      image-name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
-      image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
+      image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}

@@ -23,6 +23,7 @@ jobs:
       PLATFORMS: ${{ steps.set.outputs.PLATFORMS }}
       IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
       IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
+      IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
       VARIANTS: ${{ steps.set.outputs.VARIANTS }}
       MATRIX: ${{ steps.set.outputs.MATRIX }}
       IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
@@ -40,13 +41,15 @@ jobs:
           REGISTRY=quay.io
           REGISTRY_USER="almalinuxorg+airibarr_bot"
           IMAGE_PATH="almalinuxorg"
+          IMAGE_NAME=${{ github.event.repository.name }}
           PLATFORMS="amd64"
           VARIANTS="gnome,kde"
 
           echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
           echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
           echo "IMAGE_PATH=${IMAGE_PATH}" >> $GITHUB_OUTPUT
-          echo "IMAGE_NAME=${REGISTRY}/${IMAGE_PATH}/${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "IMAGE_REF=${REGISTRY}/${IMAGE_PATH}/${IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
           echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
 
@@ -73,9 +76,9 @@ jobs:
     with:
       variant: ${{ matrix.variant }}
       containerfile: Dockerfile
-      image_name: "${{ github.event.repository.name }}-${{ matrix.variant }}"
-      previous_image: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:latest"
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      image_name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
+      previous_image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:latest"
+      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       latest_tag: ${{ needs.set-env.outputs.LATEST_TAG }}
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config_file: ./iso.toml
