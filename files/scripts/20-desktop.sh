@@ -5,7 +5,7 @@ set -xeuo pipefail
 if [[ "${VARIANT}" == "gnome" ]]; then
     dnf install -y \
         @"Workstation"
-    
+
     systemctl enable gdm
 
 elif [[ "${VARIANT}" == "kde" ]]; then
@@ -20,5 +20,7 @@ else
 
 fi
 
-
 systemctl set-default graphical.target
+
+dnf -y remove \
+    setroubleshoot
