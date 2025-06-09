@@ -3,6 +3,14 @@
 name: Build ISOs
 on:
   workflow_dispatch:
+    inputs:
+      VARIANT:
+        description: 'Desktop variant to build'
+        required: true
+        type: choice
+        options:
+          - 'gnome'
+          - 'kde'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -48,7 +56,11 @@ jobs:
           echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
           echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
 
-          echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
+          if [[ "${{ inputs.VARIANT }}" == "ALL" ]]; then
+            echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
+          else
+            echo "MATRIX={\"variant\": '[\"${{ inputs.VARIANT }}\"]'}" >> $GITHUB_OUTPUT
+          fi
 
           # This is a workaround so that the expansion of secrets.SIGNING_SECRET doesn't break the if statement
           SECRET=$(cat <<EOF
