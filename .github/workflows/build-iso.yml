@@ -59,7 +59,7 @@ jobs:
           if [[ "${{ inputs.VARIANT }}" == "ALL" ]]; then
             echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
           else
-            echo "MATRIX={\"variant\": '[\"${{ inputs.VARIANT }}\"]'}" >> $GITHUB_OUTPUT
+            echo "MATRIX={\"variant\": [\"${{ inputs.VARIANT }}\"]}" >> $GITHUB_OUTPUT
           fi
 
           # This is a workaround so that the expansion of secrets.SIGNING_SECRET doesn't break the if statement
@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v4
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v5
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
       image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
@@ -89,5 +89,12 @@ jobs:
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
+      upload-to-github: false
+      upload-to-cloudflare: false
+      upload-to-s3: true
+      bucket: "almalinux-atomic"
+      aws-default-region: "us-east-1"
     secrets:
       REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
+      ACCESS_KEY_ID: ${{ secrets.ALMALINUX_ATOMIC_BOT_AWS_ACCESS_KEY_ID }}
+      SECRET_ACCESS_KEY: ${{ secrets.ALMALINUX_ATOMIC_BOT_AWS_SECRET_ACCESS_KEY }}
