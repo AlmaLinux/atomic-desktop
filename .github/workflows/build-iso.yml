@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v5
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@restructure
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
       image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"

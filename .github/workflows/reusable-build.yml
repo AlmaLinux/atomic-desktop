@@ -52,7 +52,7 @@ on:
 jobs:
   build-image:
     name: Build image
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@v5
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@restructure
     with:
       containerfile: ${{ inputs.containerfile }}
       image-name: ${{ inputs.image_name }}
@@ -96,7 +96,7 @@ jobs:
     name: Promote image
     needs: [build-image, test-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@v5
+    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@restructure
     with:
       image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
       tag: |
