@@ -91,7 +91,7 @@ jobs:
       AWS_REGION: us-east-1
     secrets:
       REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
-      AWS_ROLE_ARN: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/SIG_Atomic_GHA_Container_Signing
+      AWS_ROLE_ARN: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/SIG_Atomic_GHA
     permissions:
       contents: read
       packages: write
