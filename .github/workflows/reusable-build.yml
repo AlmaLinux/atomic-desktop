@@ -101,6 +101,7 @@ jobs:
       image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
       tag: |
         ${{ inputs.latest_tag }}
+        ${{ needs.build-image.outputs.major-version }}
         ${{ needs.build-image.outputs.redhat-version-id }}
         ${{ needs.build-image.outputs.version }}
       REGISTRY: ${{ inputs.registry }}
@@ -109,4 +110,3 @@ jobs:
       REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
     permissions:
       packages: write
-
