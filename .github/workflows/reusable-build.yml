@@ -40,6 +40,12 @@ on:
       latest_tag:
         required: false
         type: string
+      KMS_KEY_ID:
+        required: false
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
     outputs:
       version:
         value: ${{ jobs.build-image.outputs.version }}
@@ -48,11 +54,13 @@ on:
         required: true
       SIGNING_SECRET:
         required: false
+      AWS_ROLE_ARN:
+        required: false
 
 jobs:
   build-image:
     name: Build image
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@restructure
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@aws_sign
     with:
       containerfile: ${{ inputs.containerfile }}
       image-name: ${{ inputs.image_name }}
@@ -63,9 +71,12 @@ jobs:
       image-path: ${{ inputs.image_path }}
       REGISTRY: ${{ inputs.registry }}
       REGISTRY_USER: ${{ inputs.registry_user }}
+      KMS_KEY_ID: ${{ inputs.KMS_KEY_ID }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
     secrets:
       REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
       SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
     permissions:
       contents: read
       packages: write
@@ -96,7 +107,7 @@ jobs:
     name: Promote image
     needs: [build-image, test-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@restructure
+    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@aws_sign
     with:
       image: ${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}
       tag: |

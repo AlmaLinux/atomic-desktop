@@ -87,9 +87,11 @@ jobs:
       image_path: ${{ needs.set-env.outputs.IMAGE_PATH }}
       registry: ${{ needs.set-env.outputs.REGISTRY }}
       registry_user: ${{ needs.set-env.outputs.REGISTRY_USER }}
+      KMS_KEY_ID: SIG_Atomic_Container_Signing_GH_CI
+      AWS_REGION: us-east-1
     secrets:
       REGISTRY_TOKEN: ${{ secrets.QUAY_PASSWORD }}
-      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+      AWS_ROLE_ARN: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/SIG_Atomic_GHA_Container_Signing
     permissions:
       contents: read
       packages: write
