@@ -1,0 +1,71 @@
+---
+name: Set Environment Variables
+
+outputs:
+  LATEST_TAG:
+    description: "The latest tag based on the event type"
+    value: ${{ steps.set.outputs.LATEST_TAG }}
+  REGISTRY:
+    description: "The container registry to use"
+    value:  ${{ steps.set.outputs.REGISTRY }}
+  REGISTRY_USER:
+    description: "The user for the container registry"
+    value: ${{ steps.set.outputs.REGISTRY_USER }}
+  PLATFORMS:
+    description: "The platforms to build for"
+    value: ${{ steps.set.outputs.PLATFORMS }}
+  IMAGE_PATH:
+    description: "The path to the image in the registry"
+    value: ${{ steps.set.outputs.IMAGE_PATH }}
+  IMAGE_NAME:
+    description: "The name of the image"
+    value: ${{ steps.set.outputs.IMAGE_NAME }}
+  IMAGE_REF:
+    description: "The full reference to the image in the registry"
+    value: ${{ steps.set.outputs.IMAGE_REF }}
+  VARIANTS:
+    description: "The desktop variants to build"
+    value: ${{ steps.set.outputs.VARIANTS }}
+  MATRIX:
+    description: "The matrix of variants to build"
+    value: ${{ steps.set.outputs.MATRIX }}
+  IS_SIGNED:
+    description: "Whether the image is signed"
+    value: ${{ steps.set.outputs.IS_SIGNED }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set environment variables
+      id: set
+      shell: bash
+      run: |
+        # Pick a latest tag based on the event type
+        if [[ "${{ github.ref }}" != "refs/heads/${{ github.event.repository.default_branch }}" ]]; then
+          echo "LATEST_TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "LATEST_TAG=latest" >> $GITHUB_OUTPUT
+        fi
+
+        REGISTRY=quay.io
+        REGISTRY_USER="almalinuxorg+airibarr_bot"
+        IMAGE_PATH="almalinuxorg"
+        IMAGE_NAME="atomic-desktop"
+        PLATFORMS="amd64"
+        VARIANTS="gnome,kde"
+
+        echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
+        echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
+        echo "IMAGE_PATH=${IMAGE_PATH}" >> $GITHUB_OUTPUT
+        echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "IMAGE_REF=${REGISTRY}/${IMAGE_PATH}/${IMAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
+        echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
+
+        if [[ "${{ inputs.VARIANT }}" == "ALL" ]]; then
+          echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
+        else
+          echo "MATRIX={\"variant\": [\"${{ inputs.VARIANT }}\"]}" >> $GITHUB_OUTPUT
+        fi
+
+        echo "IS_SIGNED=true" >> $GITHUB_OUTPUT

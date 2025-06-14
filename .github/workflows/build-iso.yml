@@ -32,46 +32,8 @@ jobs:
       IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
     steps:
       - name: Set environment variables
+        uses: ./.github/actions/config
         id: set
-        run: |
-          # Pick a latest tag based on the event type
-          if [[ "${{ github.ref }}" != "refs/heads/${{ github.event.repository.default_branch }}" ]]; then
-            echo "LATEST_TAG=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "LATEST_TAG=latest" >> $GITHUB_OUTPUT
-          fi
-
-          REGISTRY=quay.io
-          REGISTRY_USER="almalinuxorg+airibarr_bot"
-          IMAGE_PATH="almalinuxorg"
-          IMAGE_NAME="atomic-desktop"
-          PLATFORMS="amd64"
-          VARIANTS="gnome,kde"
-
-          echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
-          echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
-          echo "IMAGE_PATH=${IMAGE_PATH}" >> $GITHUB_OUTPUT
-          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
-          echo "IMAGE_REF=${REGISTRY}/${IMAGE_PATH}/${IMAGE_NAME}" >> $GITHUB_OUTPUT
-          echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
-          echo "VARIANTS=${VARIANTS}" >> $GITHUB_OUTPUT
-
-          if [[ "${{ inputs.VARIANT }}" == "ALL" ]]; then
-            echo "MATRIX={\"variant\": $(echo $VARIANTS | jq -cR 'split(",")')}" >> $GITHUB_OUTPUT
-          else
-            echo "MATRIX={\"variant\": [\"${{ inputs.VARIANT }}\"]}" >> $GITHUB_OUTPUT
-          fi
-
-          # This is a workaround so that the expansion of secrets.SIGNING_SECRET doesn't break the if statement
-          SECRET=$(cat <<EOF
-          ${{ secrets.SIGNING_SECRET }}
-          EOF
-          )
-          if [ -z "${SECRET}" ]; then
-            echo "IS_SIGNED=false" >> $GITHUB_OUTPUT
-          else
-            echo "IS_SIGNED=true" >> $GITHUB_OUTPUT
-          fi
 
   build-iso:
     name: Build ISO
