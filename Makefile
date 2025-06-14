@@ -99,3 +99,31 @@ run-qemu:
 		-bios /usr/share/OVMF/x64/OVMF.4m.fd \
 		-serial stdio \
 		-hda $(QEMU_DISK_RAW)
+
+network-iso:
+	$(SUDO) rm -f ./output/almalinux.iso
+
+	curl \
+		-L \
+		-o ./output/almalinux.iso \
+		https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-10.0-x86_64-boot.iso
+	
+	mkdir -p \
+		./output/networkiso
+
+	echo "ostreecontainer --url $(IMAGE_NAME)" > ./output/networkiso.ks
+
+	$(PODMAN) run \
+		-it \
+		--rm \
+		--privileged \
+		-v ./output:/output \
+		quay.io/almalinuxorg/almalinux:10-kitten \
+		bash -c ' \
+			dnf install -y lorax && \
+			mkksiso --ks /output/networkiso.ks /output/almalinux.iso /output/networkiso/install.iso
+		'
+	
+	rm -f ./output/almalinux.iso
+
+	echo "Ensure that IMAGE_NAME is a registry URI: $(IMAGE_NAME)"
