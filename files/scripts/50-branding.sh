@@ -6,16 +6,15 @@ if [[ "${VARIANT}" == "gnome" ]]; then
     true
 
 elif [[ "${VARIANT}" == "kde" ]]; then
-    true
-    # rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop
+    rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop
 
-    # sed -i \
-    #     's,org.fedoraproject.fedora.desktop,org.kde.breezetwilight.desktop,g' \
-    #     /usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
+    sed -i \
+        's,org.fedoraproject.fedora.desktop,org.kde.breezetwilight.desktop,g' \
+        /usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
 
-    # sed -i \
-    #     's,#Current=01-breeze-fedora,Current=breeze,g' \
-    #     /etc/sddm.conf
+    sed -i \
+        's,#Current=01-breeze-fedora,Current=breeze,g' \
+        /etc/sddm.conf
 
 else
     true
