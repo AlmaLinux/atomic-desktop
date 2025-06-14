@@ -1,6 +1,12 @@
 ---
 name: Set Environment Variables
 
+inputs:
+  VARIANT:
+    description: "The desktop variant to build. Use 'ALL' to build all variants."
+    required: false
+    default: "ALL"
+
 outputs:
   LATEST_TAG:
     description: "The latest tag based on the event type"
