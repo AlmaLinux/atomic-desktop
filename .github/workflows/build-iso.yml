@@ -38,7 +38,7 @@ jobs:
         uses: ./.github/actions/config
         id: set
         with:
-          VARIANT: ${{ github.event.inputs.VARIANT }}
+          VARIANT: ${{ inputs.VARIANT }}
 
   build-iso:
     name: Build ISO

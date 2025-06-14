@@ -35,6 +35,8 @@ jobs:
       - name: Set environment variables
         uses: ./.github/actions/config
         id: set
+        with:
+          VARIANT: "ALL"
 
   build-test-promote:
     name: Build, Test, Promote
