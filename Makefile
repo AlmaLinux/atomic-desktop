@@ -53,7 +53,7 @@ bib_image:
 		-v ./output/config.toml:/config.toml:ro \
 		-v /var/lib/containers/storage:/var/lib/containers/storage \
 		quay.io/centos-bootc/bootc-image-builder:latest \
-		--type iso \
+		--type $(IMAGE_TYPE) \
 		--use-librepo=$$LIBREPO \
 		--progress verbose \
 		$(IMAGE_NAME)
