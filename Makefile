@@ -13,7 +13,7 @@ QEMU_DISK_QCOW2 ?= ./output/qcow2/disk.qcow2
 QEMU_ISO ?= ./output/bootiso/install.iso
 
 RECHUNKER_IMAGE ?= ghcr.io/hhd-dev/rechunk:latest
-BUILDDIR ?= ./output/build
+BUILDDIR ?= ./output/rechunk
 OUT_NAME=$(BUILDDIR)/$(IMAGE_NAME).tar
 
 
@@ -39,8 +39,8 @@ image:
 
 # Build base image builder (bib) image
 bib_image:
-	$(SUDO) rm -rf ./output
-	mkdir -p ./output
+	$(SUDO) rm -rf ./output/rechunk
+	mkdir -p ./output/rechunk
 
 	cp $(IMAGE_CONFIG) ./output/config.toml
 	# Don't bother trying to switch to a new image, this is just for local testing
@@ -115,64 +115,71 @@ run-qemu:
 
 # Perform rechunking operations using hhd-rechunker
 hhd-rechunk:
+	$(SUDO) rm -rf $(BUILDDIR)
 	mkdir -p $(BUILDDIR)/$(IMAGE_NAME)
 
 	# Get version label from the image
 	VERSION_LABEL=$$( $(PODMAN) inspect $(IMAGE_NAME):$(TAG) --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' )
+	echo "Version label: $$VERSION_LABEL"
 	# Get all labels from the image
 	LABELS_FROM_IMAGE=$$( $(PODMAN) inspect $(IMAGE_NAME):$(TAG) | jq -r '.[].Config.Labels | to_entries | map("\(.key)=\(.value|tostring)")|.[]' )
+	echo "Labels from image: $$LABELS_FROM_IMAGE"
 
 	# Create a temporary container to mount its filesystem
 	CREF=$$( $(PODMAN) create $(IMAGE_NAME):$(TAG) bash )
+	echo "Created temporary container: $$CREF"
 	# Mount the container's filesystem
 	MOUNT=$$( $(PODMAN) mount $$CREF )
-
-	# Pull the rechunker image
-	$(PODMAN) pull --newer --retry 3 "$(RECHUNKER_IMAGE)"
+	echo "Mounted container filesystem at: $$MOUNT"
+	$(PODMAN) pull --retry 3 "$(RECHUNKER_IMAGE)"
 
 	# Run the first rechunking step (pruning)
 	$(PODMAN) run --rm \
-		--security-opt label=disable \
-		--volume "$$MOUNT":/var/tree \
-		--env TREE=/var/tree \
-		--user 0:0 \
-		"$(RECHUNKER_IMAGE)" \
-		/sources/rechunk/1_prune.sh
+        --security-opt label=disable \
+        --volume "$$MOUNT":/var/tree \
+        --env TREE=/var/tree \
+        --user 0:0 \
+        "$(RECHUNKER_IMAGE)" \
+        /sources/rechunk/1_prune.sh
 
-	# Run the second rechunking step (creating the OSTree repository)
+    # Run the second rechunking step (creating the OSTree repository)
 	$(PODMAN) run --rm \
-		--security-opt label=disable \
-		--volume "$$MOUNT":/var/tree \
-		--volume "cache_ostree:/var/ostree" \
-		--env TREE=/var/tree \
-		--env REPO=/var/ostree/repo \
-		--env RESET_TIMESTAMP=1 \
-		--user 0:0 \
-		"$(RECHUNKER_IMAGE)" \
-		/sources/rechunk/2_create.sh
+        --security-opt label=disable \
+        --volume "$$MOUNT":/var/tree \
+        --volume "cache_ostree:/var/ostree" \
+        --env TREE=/var/tree \
+        --env REPO=/var/ostree/repo \
+        --env RESET_TIMESTAMP=1 \
+        --user 0:0 \
+        "$(RECHUNKER_IMAGE)" \
+        /sources/rechunk/2_create.sh
 
-	# Unmount and remove the temporary container
+    # Unmount and remove the temporary container
 	$(PODMAN) unmount "$$CREF"
 	$(PODMAN) rm "$$CREF"
-
-	# Run the third rechunking step (chunking and archiving)
+	
+    # Run the third rechunking step (chunking and archiving)
+    # Note the corrected volume mounts and environment variables below
 	$(PODMAN) run --rm \
-		--security-opt label=disable \
-		--volume "$(BUILDDIR)/$(IMAGE_NAME):/workspace" \
-		--volume ".:/var/git" \
-		--volume cache_ostree:/var/ostree \
-		--env REPO=/var/ostree/repo \
-		--env LABELS="$${LABELS:-$${LABELS_FROM_IMAGE}}" \
-		--env OUT_NAME="$(OUT_NAME)" \
-		--env VERSION="$$VERSION_LABEL" \
-		--env VERSION_FN=/workspace/version.txt \
-		--env OUT_REF="oci-archive:$(OUT_NAME)" \
-		--env GIT_DIR="/var/git" \
-		--user 0:0 \
-		"$(RECHUNKER_IMAGE)" \
-		/sources/rechunk/3_chunk.sh
+        --security-opt label=disable \
+        --volume "$(BUILDDIR)/$(IMAGE_NAME):/workspace" \
+        --volume "/var/lib/containers/storage:/var/lib/containers/storage:ro" \
+        --volume ".:/var/git" \
+        --volume cache_ostree:/var/ostree \
+        --env REPO=/var/ostree/repo \
+        --env LABELS="$${LABELS:-$${LABELS_FROM_IMAGE}}" \
+        --env PREV_REF="containers-storage:$(IMAGE_NAME):$(TAG)" \
+        --env OUT_NAME="/workspace/image.tar" \
+        --env VERSION="$$VERSION_LABEL" \
+        --env VERSION_FN=/workspace/version.txt \
+        --env OUT_REF="oci-archive:/workspace/image.tar" \
+        --env GIT_DIR="/var/git" \
+        --user 0:0 \
+        "$(RECHUNKER_IMAGE)" \
+        /sources/rechunk/3_chunk.sh
 
-	# Clean up cache volume and old image, then load new image
+    # Clean up cache volume and old image, then load new image
+    # Note the corrected path for the output tar file
 	$(PODMAN) volume rm cache_ostree
-	[ -f "$(OUT_NAME)" ] && $(PODMAN) rmi "$(IMAGE_NAME):$(TAG)" || true
-	$(PODMAN) load -i $(OUT_NAME)
+	[ -f "$(BUILDDIR)/$(IMAGE_NAME)/image.tar" ] && $(PODMAN) rmi "$(IMAGE_NAME):$(TAG)" || true
+	$(PODMAN) load -i $(BUILDDIR)/$(IMAGE_NAME)/image.tar
