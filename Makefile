@@ -168,7 +168,7 @@ hhd-rechunk:
         --volume cache_ostree:/var/ostree \
         --env REPO=/var/ostree/repo \
         --env LABELS="$${LABELS:-$${LABELS_FROM_IMAGE}}" \
-        --env PREV_REF="containers-storage:$(IMAGE_NAME):$(TAG)" \
+        --env PREV_REF="$(IMAGE_NAME):$(TAG)" \
         --env OUT_NAME="/workspace/image.tar" \
         --env VERSION="$$VERSION_LABEL" \
         --env VERSION_FN=/workspace/version.txt \
