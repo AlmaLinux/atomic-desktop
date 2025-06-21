@@ -12,7 +12,7 @@ QEMU_DISK_RAW ?= ./output/disk.raw
 QEMU_DISK_QCOW2 ?= ./output/qcow2/disk.qcow2
 QEMU_ISO ?= ./output/bootiso/install.iso
 
-RECHUNKER_IMAGE ?= ghcr.io/hhd-dev/rechunker:latest
+RECHUNKER_IMAGE ?= ghcr.io/hhd-dev/rechunk:latest
 BUILDDIR ?= $(PWD)/build
 PWD ?= $(shell pwd)
 # Set JUSTFILE_DIR to PWD if not already defined, as it's used in hhd-rechunk
