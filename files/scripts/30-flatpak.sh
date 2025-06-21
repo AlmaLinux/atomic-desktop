@@ -2,7 +2,5 @@
 
 set -xeuo pipefail
 
-curl \
-    --retry 3 \
-    -o /etc/flatpak/remotes.d/flathub.flatpakrepo \
-    https://dl.flathub.org/repo/flathub.flatpakrepo
+systemctl enable -f system-flatpak-setup.timer
+systemctl enable -f --global user-flatpak-setup.timer

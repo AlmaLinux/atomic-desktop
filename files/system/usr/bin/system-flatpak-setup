@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+# Check for available internet connection before proceeding (network-online.target doesn't work for some network connections)
+# Check it 3 times in 2 second interval, to avoid until loop
+# Used when adding remotes & when installing flatpaks
+check_internet_connection() {
+    local max_attempts=3
+    local sleep_time=2
+    local attempt=1
+
+    while (( attempt <= max_attempts )); do
+        if curl --silent --head --fail "https://fedoraproject.org/static/hotspot.txt" > /dev/null; then
+          return 0
+        else
+          echo "Internet connection is not available. Waiting..."
+          sleep ${sleep_time}
+          (( attempt++ ))
+        fi
+    done
+
+    return 1
+}
+
+NOTIFICATIONS="true"
+
+# Installed flatpaks
+FLATPAK_LIST=$(flatpak list --system --app --columns=application)
+
+# Flatpak list files
+USER_INSTALL_LIST_FILE="/etc/flatpak/default-flatpaks/system/install"
+USER_REMOVE_LIST_FILE="/etc/flatpak/default-flatpaks/system/remove"
+
+COMBINED_INSTALL_LIST=$(grep -v -E '^#|^$' $USER_INSTALL_LIST_FILE | awk '!seen[$0]++')
+COMBINED_REMOVE_LIST=$(grep -v -E '^#|^$' $USER_REMOVE_LIST_FILE | awk '!seen[$0]++')
+
+# Loginctl has different command for parsing json since v256 (F41), so handle that scenario here
+LOGINCTL_VERSION=$(loginctl --version | awk 'NR==1 {print $2}')
+function notify-send-pre-install {
+     if [[ ${LOGINCTL_VERSION} -ge 256 ]]; then
+       user_name=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .uid')
+     else
+       user_name=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .uid')
+     fi
+     xdg_runtime_path="/run/user/$uid"
+     sudo -u "$user_name" DBUS_SESSION_BUS_ADDRESS=unix:path="$xdg_runtime_path"/bus notify-send "Flatpak Installer" "Started install of system flatpaks" --app-name="Flatpak Installer" -u NORMAL
+}
+
+function notify-send-install {
+     if [[ ${LOGINCTL_VERSION} -ge 256 ]]; then
+       user_name=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .uid')
+     else
+       user_name=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .uid')
+     fi
+     xdg_runtime_path="/run/user/$uid"
+     sudo -u "$user_name" DBUS_SESSION_BUS_ADDRESS=unix:path="$xdg_runtime_path"/bus notify-send "Flatpak Installer" "Finished install of system flatpaks:\n$INSTALL_LIST" --app-name="Flatpak Installer" -u NORMAL
+}
+
+function notify-send-pre-uninstall {
+     if [[ ${LOGINCTL_VERSION} -ge 256 ]]; then
+       user_name=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .uid')
+     else
+       user_name=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .uid')
+     fi
+     xdg_runtime_path="/run/user/$uid"
+     sudo -u "$user_name" DBUS_SESSION_BUS_ADDRESS=unix:path="$xdg_runtime_path"/bus notify-send "Flatpak Installer" "Started uninstall of some system flatpaks" --app-name="Flatpak Installer" -u NORMAL
+}
+
+function notify-send-uninstall {
+     if [[ ${LOGINCTL_VERSION} -ge 256 ]]; then
+       user_name=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users -j | jq -r '.[] | select(.state == "active") | .uid')
+     else
+       user_name=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .user')
+       uid=$(loginctl list-users --output=json | jq -r '.[] | select(.state == "active") | .uid')
+     fi
+     xdg_runtime_path="/run/user/$uid"
+     sudo -u "$user_name" DBUS_SESSION_BUS_ADDRESS=unix:path="$xdg_runtime_path"/bus notify-send "Flatpak Installer" "Finished uninstall of system flatpaks:\n$REMOVE_LIST" --app-name="Flatpak Installer" -u NORMAL
+}
+
+# Remove flatpaks in list
+if [[ -f $USER_REMOVE_LIST_FILE ]]; then
+  REMOVE_LIST=$(comm -12 <(echo "$COMBINED_REMOVE_LIST" | sort) <(echo "$FLATPAK_LIST" | sort))
+  if [[ -n $REMOVE_LIST ]] && [[ ! $NOTIFICATIONS == "true" ]]; then
+    echo "Removing system flatpaks from config list"
+    flatpak uninstall --system --noninteractive ${REMOVE_LIST[@]}
+  elif [[ -n $REMOVE_LIST ]] && [[ $NOTIFICATIONS == "true" ]]; then
+    echo "Removing system flatpaks from config list"
+    notify-send-pre-uninstall
+    flatpak uninstall --system --noninteractive ${REMOVE_LIST[@]}
+    notify-send-uninstall
+  fi
+fi
+
+# Install flatpaks in list
+if [[ -f $USER_INSTALL_LIST_FILE ]]; then
+  if [[ -n $FLATPAK_LIST ]]; then
+    INSTALL_LIST=$(comm -23 <(echo "$COMBINED_INSTALL_LIST" | sort) <(echo "$FLATPAK_LIST" | sort))
+  else
+    INSTALL_LIST="$COMBINED_INSTALL_LIST"
+  fi
+  if [[ -n $INSTALL_LIST ]] && [[ ! $NOTIFICATIONS == "true" ]]; then
+    if check_internet_connection; then
+      echo "Installing system flatpaks from config list (requires internet)"
+      flatpak install --system --noninteractive "$REPO_NAME" ${INSTALL_LIST[@]}
+    else
+      echo "ERROR: Installation of system flatpaks was not performed, because there was no internet connection"
+      exit 1
+    fi
+  elif  [[ -n $INSTALL_LIST ]] && [[ $NOTIFICATIONS == "true" ]]; then
+    if check_internet_connection; then
+      echo "Installing system flatpaks from config list (requires internet)"
+      notify-send-pre-install
+      flatpak install --system --noninteractive "$REPO_NAME" ${INSTALL_LIST[@]}
+      notify-send-install
+    else
+      echo "ERROR: Installation of system flatpaks was not performed, because there was no internet connection"
+      exit 1
+    fi
+  fi
+fi
