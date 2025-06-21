@@ -60,6 +60,7 @@ jobs:
       upload-to-github: false
       upload-to-cloudflare: false
       upload-to-s3: true
+      s3-path: "${{ needs.set-env.outputs.IMAGE_NAME }}/${{ needs.set-env.outputs.LATEST_TAG }}"
       bucket: "almalinux-atomic"
       aws-default-region: "us-east-1"
     secrets:
