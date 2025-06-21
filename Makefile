@@ -13,13 +13,9 @@ QEMU_DISK_QCOW2 ?= ./output/qcow2/disk.qcow2
 QEMU_ISO ?= ./output/bootiso/install.iso
 
 RECHUNKER_IMAGE ?= ghcr.io/hhd-dev/rechunk:latest
-BUILDDIR ?= $(PWD)/build
-PWD ?= $(shell pwd)
-# Set JUSTFILE_DIR to PWD if not already defined, as it's used in hhd-rechunk
-JUSTFILE_DIR ?= $(PWD)
+BUILDDIR ?= ./output/build
+OUT_NAME=$(BUILDDIR)/$(IMAGE_NAME).tar
 
-IMAGE_REGISTRY ?= ghcr.io
-IMAGE_ORG ?= almalinuxorg
 
 
 .ONESHELL:
@@ -128,12 +124,11 @@ hhd-rechunk:
 
 	# Create a temporary container to mount its filesystem
 	CREF=$$( $(PODMAN) create $(IMAGE_NAME):$(TAG) bash )
-	OUT_NAME=$(IMAGE_NAME).tar
 	# Mount the container's filesystem
 	MOUNT=$$( $(PODMAN) mount $$CREF )
 
 	# Pull the rechunker image
-	$(PODMAN) pull --retry 3 "$(RECHUNKER_IMAGE)"
+	$(PODMAN) pull --newer --retry 3 "$(RECHUNKER_IMAGE)"
 
 	# Run the first rechunking step (pruning)
 	$(PODMAN) run --rm \
@@ -164,10 +159,9 @@ hhd-rechunk:
 	$(PODMAN) run --rm \
 		--security-opt label=disable \
 		--volume "$(BUILDDIR)/$(IMAGE_NAME):/workspace" \
-		--volume "$(JUSTFILE_DIR):/var/git" \
+		--volume ".:/var/git" \
 		--volume cache_ostree:/var/ostree \
 		--env REPO=/var/ostree/repo \
-		--env PREV_REF="$(IMAGE_REGISTRY)/$(IMAGE_ORG)/$(IMAGE_NAME):$(TAG)" \
 		--env LABELS="$${LABELS:-$${LABELS_FROM_IMAGE}}" \
 		--env OUT_NAME="$(OUT_NAME)" \
 		--env VERSION="$$VERSION_LABEL" \
