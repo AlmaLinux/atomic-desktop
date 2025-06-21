@@ -39,8 +39,8 @@ image:
 
 # Build base image builder (bib) image
 bib_image:
-	$(SUDO) rm -rf ./output/rechunk
-	mkdir -p ./output/rechunk
+	$(SUDO) rm -rf ./output/$(IMAGE_TYPE)
+	mkdir -p ./output/$(IMAGE_TYPE)
 
 	cp $(IMAGE_CONFIG) ./output/config.toml
 	# Don't bother trying to switch to a new image, this is just for local testing
