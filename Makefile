@@ -2,6 +2,7 @@ SUDO = sudo
 PODMAN = $(SUDO) podman
 
 IMAGE_NAME ?= localhost/myimage
+TAG ?= latest
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= gnome
 IMAGE_CONFIG ?= ./iso.toml
@@ -11,7 +12,7 @@ QEMU_DISK_RAW ?= ./output/disk.raw
 QEMU_DISK_QCOW2 ?= ./output/qcow2/disk.qcow2
 QEMU_ISO ?= ./output/bootiso/install.iso
 
-RECHUNKER_IMAGE ?= quay.io/hhd-dev/rechunker:latest
+RECHUNKER_IMAGE ?= ghcr.io/hhd-dev/rechunker:latest
 BUILDDIR ?= $(PWD)/build
 PWD ?= $(shell pwd)
 # Set JUSTFILE_DIR to PWD if not already defined, as it's used in hhd-rechunk
@@ -121,12 +122,12 @@ hhd-rechunk:
 	mkdir -p $(BUILDDIR)/$(IMAGE_NAME)
 
 	# Get version label from the image
-	VERSION_LABEL=$$( $(PODMAN) inspect localhost/$(IMAGE_NAME):$(VERSION) --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' )
+	VERSION_LABEL=$$( $(PODMAN) inspect $(IMAGE_NAME):$(TAG) --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' )
 	# Get all labels from the image
-	LABELS_FROM_IMAGE=$$( $(PODMAN) inspect localhost/$(IMAGE_NAME):$(VERSION) | jq -r '.[].Config.Labels | to_entries | map("\(.key)=\(.value|tostring)")|.[]' )
+	LABELS_FROM_IMAGE=$$( $(PODMAN) inspect $(IMAGE_NAME):$(TAG) | jq -r '.[].Config.Labels | to_entries | map("\(.key)=\(.value|tostring)")|.[]' )
 
 	# Create a temporary container to mount its filesystem
-	CREF=$$( $(PODMAN) create localhost/$(IMAGE_NAME):$(VERSION) bash )
+	CREF=$$( $(PODMAN) create $(IMAGE_NAME):$(TAG) bash )
 	OUT_NAME=$(IMAGE_NAME).tar
 	# Mount the container's filesystem
 	MOUNT=$$( $(PODMAN) mount $$CREF )
@@ -143,7 +144,7 @@ hhd-rechunk:
 		"$(RECHUNKER_IMAGE)" \
 		/sources/rechunk/1_prune.sh
 
-	# Run the second rechunking step (create ostree repo)
+	# Run the second rechunking step (creating the OSTree repository)
 	$(PODMAN) run --rm \
 		--security-opt label=disable \
 		--volume "$$MOUNT":/var/tree \
@@ -166,7 +167,7 @@ hhd-rechunk:
 		--volume "$(JUSTFILE_DIR):/var/git" \
 		--volume cache_ostree:/var/ostree \
 		--env REPO=/var/ostree/repo \
-		--env PREV_REF="$(IMAGE_REGISTRY)/$(IMAGE_ORG)/$(IMAGE_NAME):$(VERSION)" \
+		--env PREV_REF="$(IMAGE_REGISTRY)/$(IMAGE_ORG)/$(IMAGE_NAME):$(TAG)" \
 		--env LABELS="$${LABELS:-$${LABELS_FROM_IMAGE}}" \
 		--env OUT_NAME="$(OUT_NAME)" \
 		--env VERSION="$$VERSION_LABEL" \
@@ -179,5 +180,5 @@ hhd-rechunk:
 
 	# Clean up cache volume and old image, then load new image
 	$(PODMAN) volume rm cache_ostree
-	$(PODMAN) rmi localhost/$(IMAGE_NAME):$(VERSION)
+	[ -f "$(OUT_NAME)" ] && $(PODMAN) rmi "$(IMAGE_NAME):$(TAG)" || true
 	$(PODMAN) load -i $(OUT_NAME)
