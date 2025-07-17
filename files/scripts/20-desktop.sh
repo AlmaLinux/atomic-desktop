@@ -10,6 +10,7 @@ if [[ "${VARIANT}" == "gnome" ]]; then
 
 elif [[ "${VARIANT}" == "kde" ]]; then
     dnf install -y \
+        --exclude=plasma-discover-packagekit \
         @"KDE Plasma Workspaces"
 
     systemctl enable sddm
