@@ -56,7 +56,7 @@ runs:
         REGISTRY_USER="almalinuxorg+airibarr_bot"
         IMAGE_PATH="almalinuxorg"
         IMAGE_NAME="atomic-desktop"
-        PLATFORMS="amd64"
+        PLATFORMS="amd64,amd64/v2"
         VARIANTS="gnome,kde"
 
         echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT

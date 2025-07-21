@@ -5,7 +5,9 @@ PODMAN = $(SUDO) podman
 IMAGE_NAME ?= localhost/myimage
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= gnome
-IMAGE_CONFIG ?= ./iso.toml
+PLATFORM = linux/amd64
+IMAGE_CONFIG ?= ./iso.toml\
+
 
 IMAGE_TYPE ?= iso
 QEMU_DISK_RAW ?= ./output/disk.raw
@@ -19,6 +21,7 @@ clean:
 
 image:
 	$(PODMAN) build \
+		--platform=$(PLATFORM) \
 		--security-opt=label=disable \
 		--cap-add=all \
 		--device /dev/fuse \
