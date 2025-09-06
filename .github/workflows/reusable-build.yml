@@ -88,7 +88,7 @@ jobs:
     name: Build image
     needs: [check-update]
     if: ${{ !failure() && !cancelled() && (github.event_name != 'schedule' || needs.check-update.outputs.res != 0) }}
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@v7
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@v8
     with:
       containerfile: ${{ inputs.containerfile }}
       image-name: ${{ inputs.image_name }}
@@ -146,7 +146,7 @@ jobs:
     name: Promote image
     needs: [check-update, build-image, test-image]
     if: ${{ !failure() && !cancelled() && needs.test-image.result == 'success' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name != 'schedule' || needs.check-update.outputs.res != 0) }}
-    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@v7
+    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@v8
     with:
       image: ${{ needs.build-image.outputs.image-ref }}
       digest: ${{ needs.build-image.outputs.digest }}
