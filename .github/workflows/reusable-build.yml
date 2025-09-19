@@ -110,7 +110,7 @@ jobs:
             - ${{ inputs.variant == 'gnome' && 'GNOME: <version:gdm>' || 'KDE: <version:plasma-desktop>' }}:
       KMS_KEY_ALIAS: ${{ inputs.KMS_KEY_ALIAS }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
-      generate-sbom: false
+      generate-sbom: true
     secrets:
       REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
       SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
