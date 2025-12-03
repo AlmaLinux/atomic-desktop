@@ -96,7 +96,7 @@ jobs:
       upstream-public-key: almalinux-bootc.pub
       variant: ${{ inputs.variant }}
       platforms: ${{ inputs.platforms }}
-      skip-maximize-build-space: true
+      skip-maximize-build-space: false
       image-path: ${{ inputs.image_path }}
       REGISTRY: ${{ inputs.registry }}
       REGISTRY_USER: ${{ inputs.registry_user }}
