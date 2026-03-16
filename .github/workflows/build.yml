@@ -139,7 +139,7 @@ jobs:
 
       - name: Create Release
         if: ${{ env.skip != '1' }}
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
         with:
           name: "Version ${{ needs.build-test-promote.outputs.version }}"
           tag_name: ${{ needs.build-test-promote.outputs.version }}
