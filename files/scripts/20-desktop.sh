@@ -3,8 +3,24 @@
 set -xeuo pipefail
 
 if [[ "${VARIANT}" == "gnome" ]]; then
-    dnf install -y \
-        @"Workstation"
+    # aarch64 doesn't have @workstation group
+    if [[ "${TARGETARCH}" == "arm64" ]]; then
+        dnf install -y \
+            @core \
+            @fonts \
+            @gnome-desktop \
+            @guest-desktop-agents \
+            @hardware-support \
+            @internet-browser \
+            @multimedia \
+            @networkmanager-submodules \
+            @print-client \
+            @standard \
+            @workstation-product
+    else
+        dnf install -y \
+            @"Workstation"
+    fi
 
     systemctl enable gdm
 

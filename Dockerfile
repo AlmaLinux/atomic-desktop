@@ -12,6 +12,7 @@ FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:33cdd2cd472e007b7e14c8d534de
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
 ARG VARIANT
+ARG TARGETARCH
 
 RUN --mount=type=tmpfs,dst=/opt \
     --mount=type=tmpfs,dst=/tmp \
