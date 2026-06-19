@@ -7,7 +7,7 @@ COPY files/scripts /build_files/
 COPY *.pub /keys/
 
 # Base Image
-FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:e6cbe08f3a8a2f0a8c021ee765e6b9e12310ca82e62f196e3581c2d1c2b7fb29
+FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:ab46a10e29035d3d9ef28a1e8f4924963ee349e47b1010f7427da064503e5e34
 
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
