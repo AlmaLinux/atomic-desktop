@@ -32,7 +32,7 @@ elif [[ "${VARIANT}" == "kde" ]]; then
         --exclude=plasma-discover-packagekit \
         @"KDE Plasma Workspaces"
 
-    systemctl enable sddm
+    systemctl enable plasmalogin
 
 elif [[ "${VARIANT}" == "cosmic" ]]; then
     # workaround: cosmic-greeter requires fprintd-pam but for aarch64 it's only in devel repo
