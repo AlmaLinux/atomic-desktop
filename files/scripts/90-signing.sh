@@ -19,7 +19,7 @@ mkdir -p $CONTAINER_PKI
 cp ${CONTEXT_PATH}/keys/cosign.pub ${CONTAINER_PKI}/${IMAGE_NAME_FILE}.pub
 cp ${CONTEXT_PATH}/keys/${BACKUP_KEY}.pub ${CONTAINER_PKI}/${BACKUP_KEY}.pub
 
-POLICY_FILE="${CONTAINER_DIR}/policy.json"
+POLICY_FILE="${CONTAINER_DIR}/policy.json.example"
 
 # We need to add our cosign public key to the policy file and make sure
 # that the default policy is set to reject.
