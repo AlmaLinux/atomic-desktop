@@ -12,10 +12,6 @@ elif [[ "${VARIANT}" == "kde" ]]; then
         's,org.fedoraproject.fedora.desktop,org.kde.breezetwilight.desktop,g' \
         /usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
 
-    sed -i \
-        's,#Current=01-breeze-fedora,Current=breeze,g' \
-        /etc/sddm.conf
-
 else
     true
 
