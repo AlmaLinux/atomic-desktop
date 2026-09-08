@@ -30,7 +30,9 @@ if [[ "${VARIANT}" == "gnome" ]]; then
 elif [[ "${VARIANT}" == "kde" ]]; then
     dnf install -y \
         --exclude=plasma-discover-packagekit \
-        @"KDE Plasma Workspaces"
+        @"KDE Plasma Workspaces" \
+        gwenview \
+        okular
 
     systemctl enable sddm
 
