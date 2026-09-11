@@ -34,7 +34,7 @@ elif [[ "${VARIANT}" == "kde" ]]; then
         gwenview \
         okular
 
-    systemctl enable sddm
+    systemctl enable plasmalogin
 
 elif [[ "${VARIANT}" == "cosmic" ]]; then
     # workaround: cosmic-greeter requires fprintd-pam but for aarch64 it's only in devel repo
