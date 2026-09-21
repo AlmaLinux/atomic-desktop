@@ -58,4 +58,5 @@ fi
 systemctl set-default graphical.target
 
 dnf -y remove \
-    setroubleshoot
+    setroubleshoot \
+    PackageKit-command-not-found
