@@ -45,6 +45,10 @@ jobs:
   build-test-promote:
     name: Build, Test, Promote
     needs: set-env
+    # Pull requests from forks don't have access to repository secrets (e.g.
+    # QUAY_PASSWORD), so the registry login/push steps would always fail.
+    # Skip this job in that case instead of letting it fail.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
