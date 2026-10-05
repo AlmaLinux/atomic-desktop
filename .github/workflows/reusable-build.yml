@@ -69,18 +69,45 @@ jobs:
         shell: bash
         run: podman login ${{ inputs.registry }} -u ${{ inputs.registry_user }} -p ${{ secrets.REGISTRY_TOKEN }}
 
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
       - name: Check update
         id: check-update
+        env:
+          PREVIOUS_IMAGE: ${{ inputs.previous_image }}
+          CONTAINERFILE: ${{ inputs.containerfile }}
         shell: bash
         run: |
-          # 'dnf check-update'
-          # exit codes:
+          # A rebuild only changes the packages that this image adds to its base image. The ones
+          # that come with the base image only change when the base image does, and that triggers
+          # a build of its own. So only look for updates of the packages added here: otherwise an
+          # update that the base image hasn't picked up yet (or never will, like a package that is
+          # also in EPEL with a higher version) starts a build that doesn't change anything.
+          #
+          # res:
           #   0 - no updates
           #   100 - updates available
-          #   125 - tag/platform not found
-          #   127 - command not found
+          #   anything else - the check failed (image not found, etc.), build to be safe
+          BASE_IMAGE=$(awk 'toupper($1) == "FROM" { for (i = 2; i <= NF; i++) if ($i !~ /^--/) { img = $i; break } } END { print img }' "${CONTAINERFILE}")
+          echo "Base image: ${BASE_IMAGE}"
+
           res=0
-          podman run --quiet --rm ${{ inputs.previous_image }} dnf check-update || res=$?
+          BASE_PACKAGES=$(podman run --quiet --rm "${BASE_IMAGE}" rpm -qa --qf '%{NAME}\n') || res=$?
+          UPDATES=$(podman run --quiet --rm "${PREVIOUS_IMAGE}" dnf -q repoquery --upgrades --qf '%{name}') || res=$?
+
+          if [[ $res -eq 0 ]]; then
+            # Updates for packages that are not in the base image
+            RELEVANT=$(LC_ALL=C comm -23 <(echo "${UPDATES}" | grep . | LC_ALL=C sort -u) <(echo "${BASE_PACKAGES}" | LC_ALL=C sort -u) || true)
+            echo "Packages with updates:"
+            echo "${UPDATES}" | grep . | LC_ALL=C sort -u | sed 's/^/  /' || true
+            echo "Of those, added by this image (the rest come with the base image and are ignored):"
+            echo "${RELEVANT:-(none)}" | sed 's/^/  /'
+            if [[ -n "${RELEVANT}" ]]; then
+              res=100
+            fi
+          fi
+
           echo "res=${res}" >> "$GITHUB_OUTPUT"
           echo "Exit code: '$res'"
 
