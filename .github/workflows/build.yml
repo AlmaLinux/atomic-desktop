@@ -9,6 +9,17 @@ on:
     paths-ignore:
       - '**/README.md'
   workflow_dispatch:
+    inputs:
+      VARIANT:
+        description: 'Desktop variant to build'
+        required: true
+        type: choice
+        default: 'ALL'
+        options:
+          - 'gnome'
+          - 'kde'
+          - 'cosmic'
+          - 'ALL'
 
   schedule:
     # run on Saturday at 10:00 UTC
@@ -40,7 +51,8 @@ jobs:
         uses: ./.github/actions/config
         id: set
         with:
-          VARIANT: "ALL"
+          # Only manual runs can choose a variant
+          VARIANT: ${{ inputs.VARIANT || 'ALL' }}
 
   build-test-promote:
     name: Build, Test, Promote
