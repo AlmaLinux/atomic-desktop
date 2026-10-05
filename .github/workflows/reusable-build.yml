@@ -61,7 +61,7 @@ jobs:
   check-update:
     name: Check for updates
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       res: ${{ steps.check-update.outputs.res }}
     steps:
@@ -126,7 +126,7 @@ jobs:
     name: Test image
     needs: [check-update, build-image]
     if: ${{ !failure() && !cancelled() && needs.build-image.result == 'success' && (github.event_name != 'schedule' || needs.check-update.outputs.res != 0) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       IMAGE_REF: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
     steps:

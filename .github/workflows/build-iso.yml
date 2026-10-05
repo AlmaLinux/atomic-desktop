@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   set-env:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       LATEST_TAG: ${{ steps.set.outputs.LATEST_TAG }}
       REGISTRY: ${{ steps.set.outputs.REGISTRY }}
