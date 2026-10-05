@@ -5,14 +5,17 @@ PODMAN = $(SUDO) podman
 IMAGE_NAME ?= localhost/myimage
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= gnome
-PLATFORM = linux/amd64
-IMAGE_CONFIG ?= ./iso.toml\
+IMAGE_CONFIG ?= ./iso.toml
 
+# The live ISO is defined in atomic-ci, so local builds are the same as the ones from CI
+ATOMIC_CI_REF ?= dev/v12
+LIVE_URL ?= https://raw.githubusercontent.com/AlmaLinux/atomic-ci/$(ATOMIC_CI_REF)/.github/actions/build-iso/live
+LIVE_IMAGE_NAME ?= $(IMAGE_NAME)-live
+IMAGE_BUILDER ?= ghcr.io/osbuild/image-builder-cli:latest
 
-IMAGE_TYPE ?= iso
 QEMU_DISK_RAW ?= ./output/disk.raw
-QEMU_DISK_QCOW2 ?= ./output/qcow2/disk.qcow2
-QEMU_ISO ?= ./output/bootiso/install.iso
+QEMU_DISK_QCOW2 ?= ./output/disk.qcow2
+QEMU_ISO ?= ./output/install.iso
 
 .ONESHELL:
 
@@ -21,7 +24,6 @@ clean:
 
 image:
 	$(PODMAN) build \
-		--platform=$(PLATFORM) \
 		--security-opt=label=disable \
 		--cap-add=all \
 		--device /dev/fuse \
@@ -32,40 +34,56 @@ image:
 		-f $(CONTAINER_FILE) \
 		.
 
-bib_image:
-	$(SUDO) rm -rf ./output
-	mkdir -p ./output
+live_image:
+	mkdir -p ./output/live
+	curl -fsSL -o ./output/live/Containerfile $(LIVE_URL)/Containerfile
+	curl -fsSL -o ./output/live/build.sh $(LIVE_URL)/build.sh
+	chmod +x ./output/live/build.sh
 
-	cp $(IMAGE_CONFIG) ./output/config.toml
+	# Add the kickstart from the ISO configuration to the installer
+	python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["customizations"]["installer"]["kickstart"]["contents"])' \
+		$(IMAGE_CONFIG) > ./output/live/kickstart.ks
 	# Don't bother trying to switch to a new image, this is just for local testing
-	sed -i '/bootc switch/d' ./output/config.toml
+	sed -i '/bootc switch/d' ./output/live/kickstart.ks
 
-	if [ "$(IMAGE_TYPE)" = "iso" ]; then
-		LIBREPO=False;
-	else
-		LIBREPO=True;
-	fi;
+	$(PODMAN) build \
+		--pull=never \
+		--cap-add=sys_admin \
+		--security-opt=label=disable \
+		--build-arg IMAGE_REF=$(IMAGE_NAME) \
+		--build-arg ISO_NAME=$(notdir $(IMAGE_NAME)) \
+		--build-arg ISO_LABEL= \
+		-t $(LIVE_IMAGE_NAME) \
+		-f ./output/live/Containerfile \
+		./output/live
 
-	$(PODMAN) run \
+IMAGE_BUILDER_RUN = $(PODMAN) run \
 		--rm \
 		-it \
 		--privileged \
 		--pull=newer \
 		--security-opt label=type:unconfined_t \
 		-v ./output:/output \
-		-v ./output/config.toml:/config.toml:ro \
 		-v /var/lib/containers/storage:/var/lib/containers/storage \
-		quay.io/centos-bootc/bootc-image-builder:latest \
-		--type $(IMAGE_TYPE) \
-		--use-librepo=$$LIBREPO \
+		$(IMAGE_BUILDER) \
+		build \
 		--progress verbose \
-		$(IMAGE_NAME)
+		--output-dir /output
 
-iso:
-	make bib_image IMAGE_TYPE=iso
+iso: live_image
+	# The live image is the ISO, the image to install is embedded in it
+	$(IMAGE_BUILDER_RUN) \
+		--output-name install \
+		--bootc-ref $(LIVE_IMAGE_NAME) \
+		--bootc-installer-payload-ref $(IMAGE_NAME) \
+		bootc-generic-iso
 
 qcow2:
-	make bib_image IMAGE_TYPE=qcow2
+	mkdir -p ./output
+	$(IMAGE_BUILDER_RUN) \
+		--output-name disk \
+		--bootc-ref $(IMAGE_NAME) \
+		qcow2
 
 run-qemu-qcow:
 	qemu-system-x86_64 \
@@ -86,7 +104,7 @@ run-qemu-iso:
 		-M accel=kvm \
 		-cpu host \
 		-smp 2 \
-		-m 4096 \
+		-m 6144 \
 		-bios /usr/share/OVMF/x64/OVMF.4m.fd \
 		-serial stdio \
 		-boot d \
