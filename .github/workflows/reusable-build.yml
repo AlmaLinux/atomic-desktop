@@ -28,15 +28,6 @@ on:
       registry_user:
         required: true
         type: string
-      update_origin_ref:
-        required: true
-        type: string
-      update_is_signed:
-        required: true
-        type: boolean
-      config_file:
-        required: true
-        type: string
       latest_tag:
         required: false
         type: string

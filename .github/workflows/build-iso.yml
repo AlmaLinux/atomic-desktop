@@ -32,7 +32,6 @@ jobs:
       IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
       VARIANTS: ${{ steps.set.outputs.VARIANTS }}
       MATRIX: ${{ steps.set.outputs.MATRIX }}
-      IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
     steps:
       - name: Checkout github actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -54,8 +53,6 @@ jobs:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
       image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       update-origin-ref: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-      update-is-signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
-      config-file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}

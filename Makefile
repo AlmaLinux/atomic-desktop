@@ -5,7 +5,6 @@ PODMAN = $(SUDO) podman
 IMAGE_NAME ?= localhost/myimage
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= gnome
-IMAGE_CONFIG ?= ./iso.toml
 
 # The live ISO is defined in atomic-ci, so local builds are the same as the ones from CI
 ATOMIC_CI_REF ?= dev/v12
@@ -39,12 +38,6 @@ live_image:
 	curl -fsSL -o ./output/live/Containerfile $(LIVE_URL)/Containerfile
 	curl -fsSL -o ./output/live/build.sh $(LIVE_URL)/build.sh
 	chmod +x ./output/live/build.sh
-
-	# Add the kickstart from the ISO configuration to the installer
-	python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["customizations"]["installer"]["kickstart"]["contents"])' \
-		$(IMAGE_CONFIG) > ./output/live/kickstart.ks
-	# Don't bother trying to switch to a new image, this is just for local testing
-	sed -i '/bootc switch/d' ./output/live/kickstart.ks
 
 	$(PODMAN) build \
 		--pull=never \
