@@ -14,6 +14,15 @@ on:
           - 'kde'
           - 'cosmic'
           - 'ALL'
+      PLATFORM:
+        description: 'Platform to build for'
+        required: true
+        type: choice
+        default: 'ALL'
+        options:
+          - 'amd64'
+          - 'arm64'
+          - 'ALL'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -26,8 +35,8 @@ jobs:
       LATEST_TAG: ${{ steps.set.outputs.LATEST_TAG }}
       REGISTRY: ${{ steps.set.outputs.REGISTRY }}
       REGISTRY_USER: ${{ steps.set.outputs.REGISTRY_USER }}
-      #PLATFORMS: ${{ steps.set.outputs.PLATFORMS }}
-      PLATFORMS: "amd64" # v2 doesn't work right now
+      # Not all the platforms of the image: ISOs for amd64/v2 haven't been tested
+      PLATFORMS: ${{ inputs.PLATFORM == 'ALL' && 'amd64,arm64' || inputs.PLATFORM }}
       IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
       IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
       IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
