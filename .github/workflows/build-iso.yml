@@ -8,6 +8,7 @@ on:
         description: 'Desktop variant to build'
         required: true
         type: choice
+        default: 'ALL'
         options:
           - 'gnome'
           - 'kde'
