@@ -12,6 +12,10 @@ updates:
       interval: "daily"
       time: "04:00"
     open-pull-requests-limit: 5
+    # Dependabot waits 3 days before proposing a new version. Don't wait for our own workflows.
+    cooldown:
+      exclude:
+        - "AlmaLinux/atomic-ci*"
 
   # Maintain dependencies for Docker
   - package-ecosystem: "docker"
