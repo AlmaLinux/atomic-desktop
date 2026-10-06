@@ -11,7 +11,8 @@ dnf install -y \
     @multimedia \
     @networkmanager-submodules \
     @print-client \
-    @standard
+    @standard \
+    glibc-all-langpacks
 
 if [[ "${VARIANT}" == "gnome" ]]; then
     # aarch64 doesn't have @workstation group
