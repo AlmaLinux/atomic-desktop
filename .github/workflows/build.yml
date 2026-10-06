@@ -114,6 +114,8 @@ jobs:
 
       - name: Prepare Release
         id: prepare-release
+        env:
+          VERSION: ${{ needs.build-test-promote.outputs.version }}
         shell: bash
         run: |
           if [[ ! -d ${{ steps.download-changelogs.outputs.download-path }} ]]; then
@@ -122,7 +124,14 @@ jobs:
             exit
           fi
 
-          echo "Automated release for version \`${{ needs.build-test-promote.outputs.version }}\`." > ./changelog.md
+          # The images in a release don't always have the same version: when a previous run only
+          # published some of them, those get a higher version in this one. Name the release after
+          # the highest version in the changelogs, falling back to the one from the build.
+          HIGHEST=$(sed -n 's/^### Version: //p' ${{ steps.download-changelogs.outputs.download-path }}/*.txt | sort -V | tail -1)
+          VERSION="${HIGHEST:-${VERSION}}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "Automated release for version \`${VERSION}\`." > ./changelog.md
 
           for changelog in ${{ steps.download-changelogs.outputs.download-path }}/*.txt; do
             cat $changelog >> ./changelog.md
@@ -132,8 +141,8 @@ jobs:
         if: ${{ env.skip != '1' }}
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v2
         with:
-          name: "Version ${{ needs.build-test-promote.outputs.version }}"
-          tag_name: ${{ needs.build-test-promote.outputs.version }}
+          name: "Version ${{ steps.prepare-release.outputs.version }}"
+          tag_name: ${{ steps.prepare-release.outputs.version }}
           body_path: ./changelog.md
           make_latest: true
           files: "${{ steps.download-sbom.outputs.download-path }}/*.spdx.json.gz"
