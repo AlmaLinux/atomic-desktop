@@ -34,9 +34,6 @@ outputs:
   MATRIX:
     description: "The matrix of variants to build"
     value: ${{ steps.set.outputs.MATRIX }}
-  IS_SIGNED:
-    description: "Whether the image is signed"
-    value: ${{ steps.set.outputs.IS_SIGNED }}
 
 runs:
   using: "composite"
@@ -72,5 +69,3 @@ runs:
         else
           echo "MATRIX={\"variant\": [\"${{ inputs.VARIANT }}\"]}" >> $GITHUB_OUTPUT
         fi
-
-        echo "IS_SIGNED=true" >> $GITHUB_OUTPUT

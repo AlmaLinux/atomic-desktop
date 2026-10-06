@@ -8,10 +8,20 @@ on:
         description: 'Desktop variant to build'
         required: true
         type: choice
+        default: 'ALL'
         options:
           - 'gnome'
           - 'kde'
           - 'cosmic'
+          - 'ALL'
+      PLATFORM:
+        description: 'Platform to build for'
+        required: true
+        type: choice
+        default: 'ALL'
+        options:
+          - 'amd64'
+          - 'arm64'
           - 'ALL'
 
 concurrency:
@@ -20,19 +30,18 @@ concurrency:
 
 jobs:
   set-env:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       LATEST_TAG: ${{ steps.set.outputs.LATEST_TAG }}
       REGISTRY: ${{ steps.set.outputs.REGISTRY }}
       REGISTRY_USER: ${{ steps.set.outputs.REGISTRY_USER }}
-      #PLATFORMS: ${{ steps.set.outputs.PLATFORMS }}
-      PLATFORMS: "amd64" # v2 doesn't work right now
+      # Not all the platforms of the image: ISOs for amd64/v2 haven't been tested
+      PLATFORMS: ${{ inputs.PLATFORM == 'ALL' && 'amd64,arm64' || inputs.PLATFORM }}
       IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
       IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
       IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
       VARIANTS: ${{ steps.set.outputs.VARIANTS }}
       MATRIX: ${{ steps.set.outputs.MATRIX }}
-      IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
     steps:
       - name: Checkout github actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -49,13 +58,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.set-env.outputs.MATRIX)}}
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v11
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v12.1
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
       image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-      update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
-      config-file: ./iso.toml
+      update-origin-ref: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
@@ -71,4 +78,4 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      packages: write
+      packages: read

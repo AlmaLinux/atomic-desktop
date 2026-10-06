@@ -9,6 +9,17 @@ on:
     paths-ignore:
       - '**/README.md'
   workflow_dispatch:
+    inputs:
+      VARIANT:
+        description: 'Desktop variant to build'
+        required: true
+        type: choice
+        default: 'ALL'
+        options:
+          - 'gnome'
+          - 'kde'
+          - 'cosmic'
+          - 'ALL'
 
   schedule:
     # run on Saturday at 10:00 UTC
@@ -20,7 +31,7 @@ concurrency:
 
 jobs:
   set-env:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       LATEST_TAG: ${{ steps.set.outputs.LATEST_TAG }}
       REGISTRY: ${{ steps.set.outputs.REGISTRY }}
@@ -31,7 +42,6 @@ jobs:
       IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
       VARIANTS: ${{ steps.set.outputs.VARIANTS }}
       MATRIX: ${{ steps.set.outputs.MATRIX }}
-      IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
     steps:
       - name: Checkout github actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -40,7 +50,8 @@ jobs:
         uses: ./.github/actions/config
         id: set
         with:
-          VARIANT: "ALL"
+          # Only manual runs can choose a variant
+          VARIANT: ${{ inputs.VARIANT || 'ALL' }}
 
   build-test-promote:
     name: Build, Test, Promote
@@ -54,10 +65,7 @@ jobs:
       containerfile: Dockerfile
       image_name: "${{ needs.set-env.outputs.IMAGE_NAME }}-${{ matrix.variant }}"
       previous_image: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:latest"
-      update_origin_ref: "${{ needs.set-env.outputs.IMAGE_REF }}-${{ matrix.variant }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       latest_tag: ${{ needs.set-env.outputs.LATEST_TAG }}
-      update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
-      config_file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       image_path: ${{ needs.set-env.outputs.IMAGE_PATH }}
       registry: ${{ needs.set-env.outputs.REGISTRY }}
@@ -76,7 +84,7 @@ jobs:
     name: Create Release
     needs: [set-env, build-test-promote]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Fetch Changelogs
@@ -117,23 +125,6 @@ jobs:
           echo "Automated release for version \`${{ needs.build-test-promote.outputs.version }}\`." > ./changelog.md
 
           for changelog in ${{ steps.download-changelogs.outputs.download-path }}/*.txt; do
-            # Remove empty Package Changes
-            sed -i '/^#### Package Changes$/{
-            N
-            N
-            /#### Package Changes\n[[:space:]]*-[[:space:]]*\n[[:space:]]*$/d
-            }' $changelog
-
-            # Remove empty Commits
-            sed -i '/^#### Commits$/{
-            N
-            N
-            /#### Commits\n[[:space:]]*-[[:space:]]*\n[[:space:]]*$/d
-            }' $changelog
-
-            # If there are no changes, remove the section altogether
-            sed -zi 's/\n### Changes since[^#]*$//' $changelog
-
             cat $changelog >> ./changelog.md
           done
 
