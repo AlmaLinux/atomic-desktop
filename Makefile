@@ -7,7 +7,7 @@ CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?= gnome
 
 # The live ISO is defined in atomic-ci, so local builds are the same as the ones from CI
-ATOMIC_CI_REF ?= dev/v12
+ATOMIC_CI_REF ?= v12.1
 LIVE_URL ?= https://raw.githubusercontent.com/AlmaLinux/atomic-ci/$(ATOMIC_CI_REF)/.github/actions/build-iso/live
 LIVE_IMAGE_NAME ?= $(IMAGE_NAME)-live
 IMAGE_BUILDER ?= ghcr.io/osbuild/image-builder-cli:latest
