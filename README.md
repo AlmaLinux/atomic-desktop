@@ -11,9 +11,9 @@ to get you started. Create your own Atomic AlmaLinux respin in minutes!
 # Usage
 
 Download and install from the ISOs:
-* [atomic-desktop-gnome-amd64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-gnome-amd64.iso)
-* [atomic-desktop-kde-amd64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-kde-amd64.iso)
-* [atomic-desktop-cosmic-amd64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-cosmic-amd64.iso)
+* [atomic-desktop-gnome-amd64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-gnome-amd64.iso), [atomic-desktop-gnome-arm64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-gnome-arm64.iso)
+* [atomic-desktop-kde-amd64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-kde-amd64.iso), [atomic-desktop-kde-arm64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-kde-arm64.iso)
+* [atomic-desktop-cosmic-amd64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-cosmic-amd64.iso), [atomic-desktop-cosmic-arm64.iso](https://almalinux-atomic.s3-accelerate.dualstack.amazonaws.com/atomic-desktop/latest/atomic-desktop-cosmic-arm64.iso)
 
 Bootc images:
 * `quay.io/almalinuxorg/atomic-desktop-gnome`
