@@ -10,7 +10,7 @@ if [ ! -f ${CONTEXT_PATH}/keys/cosign.pub ]; then
     exit 0
 fi
 
-CONTAINER_DIR="/etc/containers"
+CONTAINER_DIR="/usr/share/containers"
 CONTAINER_PKI="/etc/pki/containers"
 IMAGE_NAME_FILE="${IMAGE_NAME//\//_}"
 BACKUP_KEY="atomic-sig-backup"
